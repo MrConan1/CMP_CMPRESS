@@ -21,6 +21,9 @@
 #define MAX_S_BYTE		127
 #define MAX_S_SHORT		32767
 #define MAX_S_LONG		2147483647
+#define MIN_S_BYTE		-128    /* Can have uncompressed runs up to 128 */
+#define MIN_S_SHORT		-32768
+#define MIN_S_LONG		-2147483648
 
 //Fctn Prototypes
 int cmp_compress(char* inputFname, unsigned int fileOffset, 
