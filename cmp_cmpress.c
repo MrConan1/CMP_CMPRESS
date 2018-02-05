@@ -3,6 +3,7 @@
 /*                 Sega's CMP routines (Used by Sega Saturn)                 */
 /*                                                                           */
 /* v1.0  1/29/18   Initial Version                                           */
+/* v1.1  2/04/18   Improved 8-bit compression                                */
 /*****************************************************************************/
 
 
@@ -18,6 +19,7 @@
 #define HDR_WORD_CMP    0x0400
 #define HDR_LONG_CMP    0x0C00
 #define HDR_SIZE_4BYTE  0x0008
+#define PROG_VERSION    "1.1"
 
 /* Prototypes */
 void printUsage();
@@ -45,6 +47,8 @@ int main(int argc, char** argv){
 	fileOffset = dataSizeBytes = 0;
 	cmprSizeBytes = decmprSizeBytes = 0;
 	pCmprData = NULL;
+
+	printf("cmp_cmpress v%s\n",PROG_VERSION);
 
     /* Check # of input arguments */
 	if(argc < MIN_ARGS){
