@@ -1,7 +1,6 @@
 # CMP_CMPRESS
 CMP Compressor (Sega Saturn Compatible RLE Compression)  
-Version 1.1  
+Version 1.2
 
-TBD:  
-Update & Verify 16-bit/32-bit compression  
+Performs 8-bit/16-bit/32-bit compression  
 
