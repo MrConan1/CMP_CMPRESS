@@ -95,7 +95,7 @@ int cmp_compress(char* inputFname, unsigned int fileOffset,
 			numShorts = sizeBytes / 2;
 			if((sizeBytes % 2) != 0)
 				numShorts++;
-			if(cmpr_16bit((short*)ibuffer,sizeBytes,
+			if(cmpr_16bit((short*)ibuffer,numShorts,
 				(short**)pCmprData,cmprSizeBytes) < 0){
 				printf("16-bit compression failed.\n");
 				rval = -1;
@@ -282,7 +282,8 @@ int cmpr_8bit(char* pData, int numBytes, char** outData, int* cmprSizeBytes){
 /*****************************************************************************/
 int cmpr_16bit(short* pData, int numShorts, short** outData, int* cmprSizeBytes){
 
-	int i, pattDetectFlg, unitSizeBytes, maxCmprSizeBytes;
+	int i, pattDetectFlg, unitSizeBytes, maxCmprSizeBytes, runtarget;
+	unsigned int u_unmatchedCount;
 	short pattern, runLength, unmatchedCount;
 	short* pCmrData;
 	short* startLoc   = pData;
@@ -290,6 +291,7 @@ int cmpr_16bit(short* pData, int numShorts, short** outData, int* cmprSizeBytes)
 	pattDetectFlg = 0;
 	unmatchedCount = 0;
 	unitSizeBytes = 2;
+	runtarget = 2;
 	*cmprSizeBytes = 0;
 
 	/* Allocate Memory for compressed data stream */
@@ -310,19 +312,17 @@ int cmpr_16bit(short* pData, int numShorts, short** outData, int* cmprSizeBytes)
 	    /* For patterns, look for a run of at least 2   */
 		/* Then determine how long the pattern runs for */
 		i = 1;
-//	    if( (numShorts >= 2) && (*patternLoc == *(patternLoc+i)) ){
-//			numShorts-= 2;
-//			i++; 
-//			runLength = 0;
-//			pattDetectFlg = 1;
 
+        if( (numShorts >= runtarget) && 
+			( ((runtarget == 2) && (*patternLoc == *(patternLoc+i))) ||
+			( ((runtarget == 3) && (*patternLoc == *(patternLoc+i)) && (*patternLoc == *(patternLoc+i+1))) )) ){
 
-		if( (numShorts >= 3) && (*patternLoc == *(patternLoc+i)) && (*patternLoc == *(patternLoc+i+1)) ){
-//printf("Pattern 0x%X \n",(*patternLoc)&0xFF);
-			numShorts-= 3;
-			i+=2; 
-			runLength = 1;
+			numShorts -= runtarget;
+			i+=runtarget-1; 
+			runLength = runtarget-2;
+			runtarget = 2;
 			pattDetectFlg = 1;
+			
 			while((numShorts > 0) && (runLength < MAX_S_SHORT)){
 				if(*patternLoc == *(patternLoc+i)){
 					i++;
@@ -342,17 +342,16 @@ int cmpr_16bit(short* pData, int numShorts, short** outData, int* cmprSizeBytes)
 
 			/* Compression Stream - Unmatched Data */
 			if(startLoc != patternLoc){
-				*cmprSizeBytes += (patternLoc-startLoc)*unitSizeBytes + unitSizeBytes;
+				u_unmatchedCount = (unsigned int)(-1*unmatchedCount);
+				*cmprSizeBytes += u_unmatchedCount*unitSizeBytes + unitSizeBytes;
 				if(*cmprSizeBytes > maxCmprSizeBytes){
 					printf("Error in compression, expansion occurred.\n");
 					return -1;
 				}
-
-				unmatchedCount = -1 * (short)(patternLoc-startLoc);
 				swap16(&unmatchedCount);
-				memcpy(pCmrData,&unmatchedCount,unitSizeBytes);         pCmrData++;
-				unmatchedCount = (short)(patternLoc-startLoc);
-				memcpy(pCmrData,startLoc,unmatchedCount*unitSizeBytes); pCmrData+=unmatchedCount;
+				memcpy(pCmrData,&unmatchedCount,unitSizeBytes);           pCmrData++;
+				memcpy(pCmrData,startLoc,u_unmatchedCount*unitSizeBytes); pCmrData+=u_unmatchedCount;
+				unmatchedCount = 0;
 			}
 
 			/* Compression Stream - Pattern Data */
@@ -363,11 +362,9 @@ int cmpr_16bit(short* pData, int numShorts, short** outData, int* cmprSizeBytes)
 			}
 
 			swap16(&runLength);
-			memcpy(pCmrData,&runLength,unitSizeBytes);   pCmrData++;
+			memcpy((char*)pCmrData,(char*)&runLength,unitSizeBytes);   pCmrData++;
 			pattern = *patternLoc;
-			swap16(&pattern);
-			memcpy(pCmrData,&pattern,unitSizeBytes);     pCmrData++;
-
+			memcpy((char*)pCmrData,(char*)&pattern,unitSizeBytes);     pCmrData++;
 			patternLoc += i;
 			startLoc = patternLoc;
 		}
@@ -379,37 +376,39 @@ int cmpr_16bit(short* pData, int numShorts, short** outData, int* cmprSizeBytes)
 
             /* If the number of unmatched units exceeds the maximum allowed */
             /* then write that data to the output stream now */
-			unmatchedCount = (short)(patternLoc-startLoc);
-			if(unmatchedCount == MAX_S_SHORT){
-				*cmprSizeBytes += unmatchedCount*unitSizeBytes + unitSizeBytes;
+			unmatchedCount--;
+			if(unmatchedCount == MIN_S_SHORT){
+				u_unmatchedCount = (unsigned int)(-1*(unmatchedCount+(short)1)) + 1;
+				*cmprSizeBytes += u_unmatchedCount*unitSizeBytes + unitSizeBytes;
 				if(*cmprSizeBytes > maxCmprSizeBytes){
 					printf("Error in compression, expansion occurred.\n");
 					return -1;
 				}
-
-				unmatchedCount = -1 * (short)(patternLoc-startLoc);
 		        swap16(&unmatchedCount);
-	       	    memcpy(pCmrData,&unmatchedCount,unitSizeBytes);         pCmrData++;
-		        unmatchedCount = (short)(patternLoc-startLoc);
-		        memcpy(pCmrData,startLoc,unmatchedCount*unitSizeBytes); pCmrData+=unmatchedCount;
+	       	    memcpy(pCmrData,&unmatchedCount,unitSizeBytes);           pCmrData++;
+		        memcpy(pCmrData,startLoc,u_unmatchedCount*unitSizeBytes); pCmrData+=u_unmatchedCount;
    			    startLoc = patternLoc;
+				unmatchedCount = 0;
+				runtarget = 2;
 			}
+			else if(unmatchedCount == (MIN_S_SHORT+1))
+				runtarget = 2;
+			else
+				runtarget = 3;
 		}
 	}
 
 	/* Write out any remaining unmatched data to the compression stream */
 	if(startLoc != patternLoc){
-		*cmprSizeBytes += (patternLoc-startLoc)*unitSizeBytes + unitSizeBytes;
+		u_unmatchedCount = (unsigned int)(-1*unmatchedCount);
+		*cmprSizeBytes += u_unmatchedCount*unitSizeBytes + unitSizeBytes;
 		if(*cmprSizeBytes > maxCmprSizeBytes){
 			printf("Error in compression, expansion occurred.\n");
 			return -1;
 		}
-
-		unmatchedCount = -1 * (short)(patternLoc-startLoc);
-		swap32(&unmatchedCount);
-		memcpy(pCmrData,&unmatchedCount,unitSizeBytes);         pCmrData++;
-		unmatchedCount = (short)(patternLoc-startLoc);
-		memcpy(pCmrData,startLoc,unmatchedCount*unitSizeBytes); pCmrData+=unmatchedCount;
+		swap16(&unmatchedCount);
+		memcpy(pCmrData,&unmatchedCount,unitSizeBytes);           pCmrData++;
+		memcpy(pCmrData,startLoc,u_unmatchedCount*unitSizeBytes); pCmrData+=u_unmatchedCount;
 	}
 
 	return 0;
@@ -428,14 +427,16 @@ int cmpr_16bit(short* pData, int numShorts, short** outData, int* cmprSizeBytes)
 /*****************************************************************************/
 int cmpr_32bit(int* pData, int numLongs, int** outData, int* cmprSizeBytes){
 
-	int pattern, unitSizeBytes;
-	int i, runLength, pattDetectFlg, unmatchedCount, maxCmprSizeBytes;
+	int pattern, unitSizeBytes, unmatchedCount;
+	int i, runLength, runtarget, pattDetectFlg, maxCmprSizeBytes;
+    unsigned int u_unmatchedCount;
 	int* pCmrData;
 	int* startLoc   = pData;
 	int* patternLoc = pData;
 	pattDetectFlg = 0;
 	unmatchedCount = 0;
 	unitSizeBytes = 4;
+	runtarget = 2;
 	*cmprSizeBytes = 0;
 
 	/* Allocate Memory for compressed data stream */
@@ -456,16 +457,17 @@ int cmpr_32bit(int* pData, int numLongs, int** outData, int* cmprSizeBytes){
 	    /* For patterns, look for a run of at least 2   */
 		/* Then determine how long the pattern runs for */
 		i = 1;
-		if( (numLongs >= 3) && (*patternLoc == *(patternLoc+i)) && (*patternLoc == *(patternLoc+i+1)) ){
-			numLongs-= 3;
-			i+=2; 
-			runLength = 1;
+		
+        if( (numLongs >= runtarget) && 
+            ( ((runtarget == 2) && (*patternLoc == *(patternLoc+i))) ||
+            ( ((runtarget == 3) && (*patternLoc == *(patternLoc+i)) && (*patternLoc == *(patternLoc+i+1))) )) ){
 
-//	    if( (numLongs >= 2) && (*patternLoc == *(patternLoc+i)) ){
-//			numLongs-= 2;
-//			i++; 
-//			runLength = 0;
+			numLongs-= runtarget;
+			i+=runtarget-1; 
+			runLength = runtarget-2;
+			runtarget = 2;
 			pattDetectFlg = 1;
+
 			while((numLongs > 0) && (runLength < MAX_S_LONG)){
 				if(*patternLoc == *(patternLoc+i)){
 					i++;
@@ -485,17 +487,17 @@ int cmpr_32bit(int* pData, int numLongs, int** outData, int* cmprSizeBytes){
 
 			/* Compression Stream - Unmatched Data */
 			if(startLoc != patternLoc){
-				*cmprSizeBytes += (patternLoc-startLoc)*unitSizeBytes + unitSizeBytes;
+				u_unmatchedCount = (unsigned int)(-1*unmatchedCount);
+				*cmprSizeBytes += u_unmatchedCount*unitSizeBytes + unitSizeBytes;
 				if(*cmprSizeBytes > maxCmprSizeBytes){
 					printf("Error in compression, expansion occurred.\n");
 					return -1;
 				}
 
-				unmatchedCount = -1 * (int)(patternLoc-startLoc);
 				swap32(&unmatchedCount);
-				memcpy(pCmrData,&unmatchedCount,unitSizeBytes);         pCmrData++;
-				unmatchedCount = (int)(patternLoc-startLoc);
-				memcpy(pCmrData,startLoc,unmatchedCount*unitSizeBytes); pCmrData+=unmatchedCount;
+				memcpy(pCmrData,&unmatchedCount,unitSizeBytes);           pCmrData++;
+				memcpy(pCmrData,startLoc,u_unmatchedCount*unitSizeBytes); pCmrData+=u_unmatchedCount;
+				unmatchedCount = 0;
 			}
 
 			/* Compression Stream - Pattern Data */
@@ -508,7 +510,6 @@ int cmpr_32bit(int* pData, int numLongs, int** outData, int* cmprSizeBytes){
 			swap32(&runLength);
 			memcpy(pCmrData,&runLength,unitSizeBytes);   pCmrData++;
 			pattern = *patternLoc;
-			swap32(&pattern);
 			memcpy(pCmrData,&pattern,unitSizeBytes);     pCmrData++;
 
 			patternLoc += i;
@@ -522,37 +523,40 @@ int cmpr_32bit(int* pData, int numLongs, int** outData, int* cmprSizeBytes){
 
             /* If the number of unmatched units exceeds the maximum allowed */
             /* then write that data to the output stream now */
-			unmatchedCount = (int)(patternLoc-startLoc);
-			if(unmatchedCount == MAX_S_LONG){
-				*cmprSizeBytes += unmatchedCount*unitSizeBytes + unitSizeBytes;
+			unmatchedCount--;
+			if(unmatchedCount == MIN_S_LONG){
+				u_unmatchedCount = (unsigned int)(-1*(unmatchedCount+(int)1)) + 1;
+				*cmprSizeBytes += u_unmatchedCount*unitSizeBytes + unitSizeBytes;
 				if(*cmprSizeBytes > maxCmprSizeBytes){
 					printf("Error in compression, expansion occurred.\n");
 					return -1;
 				}
 
-				unmatchedCount = -1 * (int)(patternLoc-startLoc);
 		        swap32(&unmatchedCount);
-	       	    memcpy(pCmrData,&unmatchedCount,unitSizeBytes);         pCmrData++;
-		        unmatchedCount = (int)(patternLoc-startLoc);
-		        memcpy(pCmrData,startLoc,unmatchedCount*unitSizeBytes); pCmrData+=unmatchedCount;
+	       	    memcpy(pCmrData,&unmatchedCount,unitSizeBytes);           pCmrData++;
+		        memcpy(pCmrData,startLoc,u_unmatchedCount*unitSizeBytes); pCmrData+=u_unmatchedCount;
    			    startLoc = patternLoc;
+				unmatchedCount = 0;
+				runtarget = 2;
 			}
+			else if(unmatchedCount == (MIN_S_LONG+1))
+                runtarget = 2;
+			else
+                runtarget = 3;
 		}
 	}
 
 	/* Write out any remaining unmatched data to the compression stream */
 	if(startLoc != patternLoc){
-		*cmprSizeBytes += (patternLoc-startLoc)*unitSizeBytes + unitSizeBytes;
+		u_unmatchedCount = (unsigned int)(-1*unmatchedCount);
+		*cmprSizeBytes += u_unmatchedCount*unitSizeBytes + unitSizeBytes;
 		if(*cmprSizeBytes > maxCmprSizeBytes){
 			printf("Error in compression, expansion occurred.\n");
 			return -1;
 		}
-
-		unmatchedCount = -1 * (int)(patternLoc-startLoc);
 		swap32(&unmatchedCount);
-		memcpy(pCmrData,&unmatchedCount,unitSizeBytes);         pCmrData++;
-		unmatchedCount = (int)(patternLoc-startLoc);
-		memcpy(pCmrData,startLoc,unmatchedCount*unitSizeBytes); pCmrData+=unmatchedCount;
+		memcpy(pCmrData,&unmatchedCount,unitSizeBytes);           pCmrData++;
+		memcpy(pCmrData,startLoc,u_unmatchedCount*unitSizeBytes); pCmrData+=u_unmatchedCount;
 	}
 
 	return 0;

@@ -4,6 +4,7 @@
 /*                                                                           */
 /* v1.0  1/29/18   Initial Version                                           */
 /* v1.1  2/04/18   Improved 8-bit compression                                */
+/* v1.2  2/13/18   Updated 16/32-bit alg to match 8-bit                      */
 /*****************************************************************************/
 
 
@@ -19,7 +20,7 @@
 #define HDR_WORD_CMP    0x0400
 #define HDR_LONG_CMP    0x0C00
 #define HDR_SIZE_4BYTE  0x0008
-#define PROG_VERSION    "1.1"
+#define PROG_VERSION    "1.2"
 
 /* Prototypes */
 void printUsage();
