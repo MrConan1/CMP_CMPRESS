@@ -155,9 +155,9 @@ int cmpr_8bit(char* pData, int numBytes, char** outData, int* cmprSizeBytes){
 	*cmprSizeBytes = 0;
 
 	/* Allocate Memory for compressed data stream */
-	/* Assume the compressed data will not exceed the original size  */
-	/* If expansion does occur, the code that follows will abort out */
-	maxCmprSizeBytes = numBytes*unitSizeBytes;
+	/* Assume the compressed data will not exceed twice the original size  */
+	/* If expansion beyond this does occur, the code that follows will abort out */
+	maxCmprSizeBytes = numBytes*unitSizeBytes*2;
 	*outData = (char*)malloc(maxCmprSizeBytes);
 	if(*outData == NULL){
 		printf("Error allocating memory for compressed data stream\n");
@@ -295,9 +295,9 @@ int cmpr_16bit(short* pData, int numShorts, short** outData, int* cmprSizeBytes)
 	*cmprSizeBytes = 0;
 
 	/* Allocate Memory for compressed data stream */
-	/* Assume the compressed data will not exceed the original size  */
-	/* If expansion does occur, the code that follows will abort out */
-	maxCmprSizeBytes = numShorts*unitSizeBytes;
+	/* Assume the compressed data will not exceed twice the original size  */
+	/* If expansion beyond this does occur, the code that follows will abort out */
+	maxCmprSizeBytes = numShorts*unitSizeBytes*2;
 	*outData = (short*)malloc(maxCmprSizeBytes);
 	if(*outData == NULL){
 		printf("Error allocating memory for compressed data stream\n");
@@ -440,9 +440,9 @@ int cmpr_32bit(int* pData, int numLongs, int** outData, int* cmprSizeBytes){
 	*cmprSizeBytes = 0;
 
 	/* Allocate Memory for compressed data stream */
-	/* Assume the compressed data will not exceed the original size  */
-	/* If expansion does occur, the code that follows will abort out */
-	maxCmprSizeBytes = numLongs*unitSizeBytes;
+	/* Assume the compressed data will not exceed twice the original size  */
+	/* If expansion beyond this does occur, the code that follows will abort out */
+	maxCmprSizeBytes = numLongs*unitSizeBytes*2;
 	*outData = (int*)malloc(maxCmprSizeBytes);
 	if(*outData == NULL){
 		printf("Error allocating memory for compressed data stream\n");
