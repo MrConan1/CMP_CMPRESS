@@ -5,6 +5,7 @@
 /* v1.0  1/29/18   Initial Version                                           */
 /* v1.1  2/04/18   Improved 8-bit compression                                */
 /* v1.2  2/13/18   Updated 16/32-bit alg to match 8-bit                      */
+/* v1.3  10/19/19  Fixed swap of pattern data for 16/32-bit algs             */
 /*****************************************************************************/
 
 

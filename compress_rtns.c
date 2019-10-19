@@ -364,6 +364,7 @@ int cmpr_16bit(short* pData, int numShorts, short** outData, int* cmprSizeBytes)
 			swap16(&runLength);
 			memcpy((char*)pCmrData,(char*)&runLength,unitSizeBytes);   pCmrData++;
 			pattern = *patternLoc;
+            swap16(&pattern);
 			memcpy((char*)pCmrData,(char*)&pattern,unitSizeBytes);     pCmrData++;
 			patternLoc += i;
 			startLoc = patternLoc;
@@ -510,6 +511,7 @@ int cmpr_32bit(int* pData, int numLongs, int** outData, int* cmprSizeBytes){
 			swap32(&runLength);
 			memcpy(pCmrData,&runLength,unitSizeBytes);   pCmrData++;
 			pattern = *patternLoc;
+			swap32(&pattern);
 			memcpy(pCmrData,&pattern,unitSizeBytes);     pCmrData++;
 
 			patternLoc += i;
